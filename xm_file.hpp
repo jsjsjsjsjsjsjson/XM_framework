@@ -15,10 +15,17 @@
     (ptr) = nullptr;          \
 } while(0)
 
+#define NO_LOOP 0
+#define FORWARD_LOOP 1
+#define BIDI_LOOP 2
+
+#define SAMPLE_8BIT 0
+#define SAMPLE_16BIT 1
+
 #define MAX_ROWS 256
 #define MAX_CHANNELS 64
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     char ID_text[17] = {'E', 'x', 't', 'e', 'n', 'd', 'e', 'd', ' ', 'm', 'o', 'd', 'u', 'l', 'e', ':', ' '};
     char name[20] = "";
     uint8_t ID1A = 0x1A;
@@ -57,28 +64,74 @@ typedef struct __attribute__((packed)) {
     uint8_t *packed_data = NULL;
     pattern_cell_t **unpack_data = NULL;
     // ---PATTERN_DATA----
-} xm_pattern_data_t;
+} xm_pattern_t;
 
 typedef struct __attribute__((packed)) {
-    uint8_t x;
-};
+    uint16_t x;
+    uint16_t y;
+} env_point_t;
+
+typedef struct {
+    bool on : 1;
+    bool sus : 1;
+    bool loop : 1;
+} env_type_t;
+
+typedef struct {
+    uint8_t loop_mode : 2;
+    uint8_t reserved : 2;
+    bool sample_bit : 1;
+} sample_type_t;
+
+
+typedef struct __attribute__((packed)) {
+    uint32_t length = 0;
+    uint32_t loop_start = 0;
+    uint32_t loop_length = 0;
+    uint8_t volume = 64;
+    int8_t finetune = 0;
+    sample_type_t type;
+    uint8_t pan = 124;
+    int8_t rela_note_num = 0x1D;
+    uint8_t mode = 0;
+    char name[22] = "SAMPLE";
+    void *data = NULL;
+} xm_sample_t;
 
 typedef struct __attribute__((packed)) {
     // ----METADATA----
-    uint32_t size = 29;
-    char name[22] = "INSTRUMENT";
-    uint8_t type = 0; // Almost always 0. Doesn't mean anything.
-    uint16_t num_sample = 0;
+    uint32_t size;
+    char name[22];
+    uint8_t type; // Almost always 0. Doesn't mean anything.
+    uint16_t num_sample;
     // ----METADATA----
 
     // ----DATA---- (if num_sample is not zero)
-    uint32_t sample_header_size = 40; // v
     /*This field appears to be completely ignored by Fast Tracker 2 and there are modules in the wild that have completely broken values in this field.
     It's better to ignore it and assume the sample header size is always 40.*/
+    uint32_t sample_header_size;
     uint8_t keymap[96];
-
+    env_point_t vol_env[12];
+    env_point_t pan_env[12];
+    uint8_t num_vol_point;
+    uint8_t num_pan_point;
+    uint8_t vol_sus_point;
+    uint8_t vol_loop_start_point;
+    uint8_t vol_loop_end_point;
+    uint8_t pan_sus_point;
+    uint8_t pan_loop_start_point;
+    uint8_t pan_loop_end_point;
+    env_type_t vol_env_type;
+    env_type_t pan_env_type;
+    uint8_t vib_type;
+    uint8_t vib_sweep;
+    uint8_t vib_depth;
+    uint8_t vib_rate;
+    uint16_t vol_fadeout;
+    char reserved[22];
     // ----DATA----
-} xm_instrument_data_t;
+    std::vector<xm_sample_t> sample;
+} xm_instrument_t;
 
 /**
  * 解包打包的乐段数据。
@@ -95,6 +148,8 @@ bool unpack_pattern_data(uint8_t *packed_data, uint32_t packed_size,
     if (!packed_data || !output_data) {
         return false;
     }
+
+    sizeof(xm_instrument_t);
 
     uint32_t data_index = 0;
     for (uint16_t row = 0; row < num_rows; ++row) {
@@ -180,7 +235,8 @@ public:
     char *current_file_name = NULL;
 
     xm_header_t header;
-    std::vector<xm_pattern_data_t> pattern;
+    std::vector<xm_pattern_t> pattern;
+    std::vector<xm_instrument_t> instrument;
 
     void open_xm_file(const char *filename) {
         xm_file = fopen(filename, "rb+");
@@ -203,12 +259,12 @@ public:
         printf("\n");
     }
 
-    void read_xm_pattern_data() {
+    void read_xm_pattern() {
         fseek(xm_file, header.header_size + 60, SEEK_SET);
         for (uint16_t p = 0; p < header.num_pattern; p++) {
-            xm_pattern_data_t pat_tmp;
+            xm_pattern_t pat_tmp;
             fread(&pat_tmp, 1, 9, xm_file);
-            printf("READ PATTERN #%d IN %p | SIZE: %d, CHAN: %d, ROWS: %d\n", p, (size_t)ftell(xm_file), pat_tmp.packed_data_size, header.num_channel, pat_tmp.num_rows);
+            printf("READ PATTERN #%d IN %p | SIZE: %d, CHAN: %d, ROWS: %d\n", p, ftell(xm_file), pat_tmp.packed_data_size, header.num_channel, pat_tmp.num_rows);
             pat_tmp.packed_data = new uint8_t[pat_tmp.packed_data_size];
             pat_tmp.unpack_data = new pattern_cell_t*[header.num_channel];
             for (uint16_t c = 0; c < header.num_channel; c++) {
@@ -219,6 +275,80 @@ public:
             printf("UNPACK: %p\n", (void*)pat_tmp.unpack_data);
             unpack_pattern_data(pat_tmp.packed_data, pat_tmp.packed_data_size, pat_tmp.num_rows, header.num_channel, pat_tmp.unpack_data);
             pattern.push_back(pat_tmp);
+        }
+    }
+
+    void read_xm_sample() {
+        // xm_sample_t smp_tmp;
+        // printf("READ SAMPLE #%d IN %p\n", sample.size() + 1, ftell(xm_file));
+        // fread(&smp_tmp, 1, 40, xm_file);
+        // printf("SAMPLE %s\n%s, SIZE: %d bytes\n\nALLOC MEMORY...\n", smp_tmp.name, smp_tmp.type.sample_bit == SAMPLE_8BIT ? "8BIT" : "16BIT", smp_tmp.length);
+        // // smp_tmp.data = malloc(smp_tmp.length);
+        // smp_tmp.data = new int8_t[smp_tmp.length];
+        // printf("READING->%p...", smp_tmp.data);
+        // fread(smp_tmp.data, 1, smp_tmp.length, xm_file);
+        // sample.push_back(smp_tmp);
+        // printf("SUCCESS\n");
+    }
+
+    void read_xm_instrument() {
+        for (uint16_t i = 0; i < header.num_instrument; i++) {
+            xm_instrument_t inst_tmp;
+            printf("READ INSTRUMENT #%d IN %p\n", i + 1, ftell(xm_file));
+            fread(&inst_tmp, 1, 29, xm_file);
+            printf("NAME: %s, SIZE: %d, NUM_SAMP: %d\n", inst_tmp.name, inst_tmp.size, inst_tmp.num_sample);
+            if (inst_tmp.num_sample) {
+                printf("READ METADATA AND ENVELOPE...\n");
+                fseek(xm_file, -29, SEEK_CUR);
+                fread(&inst_tmp, 1, 263, xm_file);
+                printf("SAMPLE HEADER SIZE: %d\n", inst_tmp.sample_header_size);
+                printf("SAMPLE KEYMAP:\n");
+                for (uint8_t k = 0; k < 96; k++) {
+                    printf("%d ", inst_tmp.keymap[k] + 1);
+                } printf("\n\n");
+
+                printf("PAN ENV POINR (x: y)\n");
+                if (inst_tmp.vol_env_type.on) {
+                    printf("VOL ENV POINR (x: y)\n");
+                    for (uint8_t t = 0; t < inst_tmp.num_vol_point; t++) {
+                        printf("%d: %d", inst_tmp.vol_env[t].x, inst_tmp.vol_env[t].y);
+                        if (inst_tmp.vol_env_type.sus) {
+                            if (t == inst_tmp.vol_sus_point) printf(" <- SUS");
+                        }
+                        if (inst_tmp.vol_env_type.loop) {
+                            if (t == inst_tmp.vol_loop_start_point) printf(" <- LOOP START");
+                            if (t == inst_tmp.vol_loop_end_point) printf(" <- LOOP END");
+                        }
+                        printf("\n");
+                    } printf("\n\n");
+                } else {
+                    printf("VOL ENV IS DISABLE\n\n");
+                }
+
+                printf("PAN ENV POINR (x: y)\n");
+                if (inst_tmp.pan_env_type.on) {
+                    for (uint8_t t = 0; t < inst_tmp.num_pan_point; t++) {
+                        printf("%d: %d", inst_tmp.pan_env[t].x, inst_tmp.pan_env[t].y);
+                        if (inst_tmp.pan_env_type.sus) {
+                            if (t == inst_tmp.pan_sus_point) printf(" <- SUS");
+                        }
+                        if (inst_tmp.pan_env_type.loop) {
+                            if (t == inst_tmp.pan_loop_start_point) printf(" <- LOOP START");
+                            if (t == inst_tmp.pan_loop_end_point) printf(" <- LOOP END");
+                        }
+                        printf("\n");
+                    } printf("\n\n");
+                } else {
+                    printf("PAN ENV IS DISABLE\n\n");
+                }
+            } else {
+                printf("NO SAMPLE, SKIP.\n");
+            }
+            printf("sizeof(instrument) = %d\n", sizeof(inst_tmp));
+            instrument.push_back(inst_tmp);
+            for (uint16_t s = 0; s < instrument.back().num_sample; s++) {
+                read_xm_sample();
+            }
         }
     }
 
@@ -311,7 +441,8 @@ public:
 
     void load_xm_file() {
         read_xm_header();
-        read_xm_pattern_data();
+        read_xm_pattern();
+        read_xm_instrument();
     }
 };
 
