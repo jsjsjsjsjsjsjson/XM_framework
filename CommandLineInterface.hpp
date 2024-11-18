@@ -26,7 +26,7 @@ public:
 
     void begin(const std::string &termPrompt) {
         prompt = termPrompt;
-        std::cout << "Command Line Interface Started" << std::endl;
+        printf("%s %s\n", __DATE__, __TIME__);
         printPrompt();
         addCommand("help", helpCmd);
     }
