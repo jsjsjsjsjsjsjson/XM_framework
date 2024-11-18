@@ -20,7 +20,7 @@ void load_xm_file_cmd(int argc, const char* argv[]) {
 }
 
 int main() {
-    xm_file.open_xm_file("fod_nit.xm");
+    xm_file.open_xm_file("madwreck_-_thunder.xm");
     printf("Open: %s\n", xm_file.current_file_name);
     xm_file.load_xm_file();
     xm_file.print_xm_info();

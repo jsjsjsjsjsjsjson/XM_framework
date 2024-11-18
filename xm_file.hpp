@@ -228,6 +228,8 @@ bool unpack_pattern_data(uint8_t *packed_data, uint32_t packed_size,
     return true;
 }
 
+#include <unistd.h> 
+
 class XMFile {
 public:
     FILE *xm_file;
@@ -278,17 +280,21 @@ public:
         }
     }
 
-    void read_xm_sample() {
-        // xm_sample_t smp_tmp;
-        // printf("READ SAMPLE #%d IN %p\n", sample.size() + 1, ftell(xm_file));
-        // fread(&smp_tmp, 1, 40, xm_file);
-        // printf("SAMPLE %s\n%s, SIZE: %d bytes\n\nALLOC MEMORY...\n", smp_tmp.name, smp_tmp.type.sample_bit == SAMPLE_8BIT ? "8BIT" : "16BIT", smp_tmp.length);
-        // // smp_tmp.data = malloc(smp_tmp.length);
-        // smp_tmp.data = new int8_t[smp_tmp.length];
-        // printf("READING->%p...", smp_tmp.data);
-        // fread(smp_tmp.data, 1, smp_tmp.length, xm_file);
-        // sample.push_back(smp_tmp);
-        // printf("SUCCESS\n");
+    void read_xm_sample(xm_instrument_t *inst) {
+        for (uint16_t s = 0; s < inst->num_sample; s++) {
+            xm_sample_t smp_tmp;
+            printf("READ SAMPLE #%d METADATA IN %p\n", inst->sample.size(), ftell(xm_file));
+            fread(&smp_tmp, 1, 40, xm_file);
+            inst->sample.push_back(smp_tmp);
+            printf("SAMPLE %s\n%s, SIZE: %d bytes\n\n", smp_tmp.name, smp_tmp.type.sample_bit == SAMPLE_8BIT ? "8BIT" : "16BIT", smp_tmp.length);
+        }
+        for (uint16_t s = 0; s < inst->num_sample; s++) {
+            printf("READ SAMPLE #%d IN %p\nALLOC %d bytes MEMORY...\n", s, ftell(xm_file), inst->sample[s].length);
+            inst->sample[s].data = new int8_t[inst->sample[s].length];
+            printf("READING->%p...", inst->sample[s].data);
+            fread(inst->sample[s].data, 1, inst->sample[s].length, xm_file);
+            printf("SUCCESS\n\n");
+        }
     }
 
     void read_xm_instrument() {
@@ -304,12 +310,11 @@ public:
                 printf("SAMPLE HEADER SIZE: %d\n", inst_tmp.sample_header_size);
                 printf("SAMPLE KEYMAP:\n");
                 for (uint8_t k = 0; k < 96; k++) {
-                    printf("%d ", inst_tmp.keymap[k] + 1);
+                    printf("%d ", inst_tmp.keymap[k]);
                 } printf("\n\n");
 
-                printf("PAN ENV POINR (x: y)\n");
+                printf("VOL ENV POINT (x: y)\n");
                 if (inst_tmp.vol_env_type.on) {
-                    printf("VOL ENV POINR (x: y)\n");
                     for (uint8_t t = 0; t < inst_tmp.num_vol_point; t++) {
                         printf("%d: %d", inst_tmp.vol_env[t].x, inst_tmp.vol_env[t].y);
                         if (inst_tmp.vol_env_type.sus) {
@@ -325,7 +330,7 @@ public:
                     printf("VOL ENV IS DISABLE\n\n");
                 }
 
-                printf("PAN ENV POINR (x: y)\n");
+                printf("PAN ENV POINT (x: y)\n");
                 if (inst_tmp.pan_env_type.on) {
                     for (uint8_t t = 0; t < inst_tmp.num_pan_point; t++) {
                         printf("%d: %d", inst_tmp.pan_env[t].x, inst_tmp.pan_env[t].y);
@@ -341,14 +346,11 @@ public:
                 } else {
                     printf("PAN ENV IS DISABLE\n\n");
                 }
+                read_xm_sample(&inst_tmp);
             } else {
                 printf("NO SAMPLE, SKIP.\n");
             }
-            printf("sizeof(instrument) = %d\n", sizeof(inst_tmp));
             instrument.push_back(inst_tmp);
-            for (uint16_t s = 0; s < instrument.back().num_sample; s++) {
-                read_xm_sample();
-            }
         }
     }
 
