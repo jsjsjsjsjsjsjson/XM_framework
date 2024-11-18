@@ -24,7 +24,7 @@ int main() {
     printf("Open: %s\n", xm_file.current_file_name);
     xm_file.load_xm_file();
     xm_file.print_xm_info();
-    cli.begin("CLI");
+    cli.begin("XM");
     cli.addCommand("print_pat", print_pattern_cmd);
     while (true) {
         cli.update();

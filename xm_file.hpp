@@ -22,7 +22,7 @@ typedef struct __attribute__((packed)) {
     char ID_text[17] = {'E', 'x', 't', 'e', 'n', 'd', 'e', 'd', ' ', 'm', 'o', 'd', 'u', 'l', 'e', ':', ' '};
     char name[20] = "";
     uint8_t ID1A = 0x1A;
-    char tracker_name[20] = "ESP32Tracker";
+    char tracker_name[20] = "MicroTracker";
     uint8_t tracker_version[2] = {0, 1};
     uint32_t header_size = 0x00000114;
     uint16_t song_len = 1;
@@ -33,7 +33,7 @@ typedef struct __attribute__((packed)) {
     uint16_t freq_mode = 0xffff;
     uint16_t def_tempo = 4;
     uint16_t def_bpm = 125;
-    uint8_t order_table[256];
+    std::vector<uint8_t> order_table;
 } xm_header_t;
 
 typedef struct {
@@ -58,6 +58,27 @@ typedef struct __attribute__((packed)) {
     pattern_cell_t **unpack_data = NULL;
     // ---PATTERN_DATA----
 } xm_pattern_data_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t x;
+};
+
+typedef struct __attribute__((packed)) {
+    // ----METADATA----
+    uint32_t size = 29;
+    char name[22] = "INSTRUMENT";
+    uint8_t type = 0; // Almost always 0. Doesn't mean anything.
+    uint16_t num_sample = 0;
+    // ----METADATA----
+
+    // ----DATA---- (if num_sample is not zero)
+    uint32_t sample_header_size = 40; // v
+    /*This field appears to be completely ignored by Fast Tracker 2 and there are modules in the wild that have completely broken values in this field.
+    It's better to ignore it and assume the sample header size is always 40.*/
+    uint8_t keymap[96];
+
+    // ----DATA----
+} xm_instrument_data_t;
 
 /**
  * 解包打包的乐段数据。
@@ -174,7 +195,8 @@ public:
     void read_xm_header() {
         fseek(xm_file, 0, SEEK_SET);
         fread(&header, 1, 80, xm_file);
-        fread(header.order_table, 1, header.song_len, xm_file);
+        header.order_table.resize(header.song_len);
+        fread(header.order_table.data(), 1, header.song_len, xm_file);
         for (uint8_t i = 0; i < header.song_len; i++) {
             printf("%d ", header.order_table[i]);
         }
@@ -201,6 +223,7 @@ public:
     }
 
     void print_pattern(uint16_t num, int startChl, int endChl, int startRow, int endRow) {
+        printf("PATTERN #%d: Channel %d ~ %d, Row %d ~ %d\n", num, startChl, endChl, startRow, endRow);
         printf("┌────");
         for (int i = startChl; i < endChl; i++) {
             printf("─────────────────────");
@@ -275,9 +298,9 @@ public:
     
     void print_xm_info() {
         printf("XM FILE INFO (HEADER=%.17s ID=0x%02X)\n", header.ID_text, header.ID1A);
-        printf("FILENAME: %s, SONGNAME: %s\n", current_file_name, header.name);
+        printf("FILENAME: %s, SONGNAME: %.20s\n", current_file_name, header.name);
         printf("CHANNELS: %d, PATTERNS: %d, INSTRUMENT: %d, SONGLEN: %d, RESTART IN %d\n", header.num_channel, header.num_pattern, header.num_instrument, header.song_len, header.restart_pos);
-        printf("CREATED IN %s, VERSION %d.%d\n", header.tracker_name, header.tracker_version[0], header.tracker_version[1]);
+        printf("CREATED IN %.20s, VERSION %d.%d\n", header.tracker_name, header.tracker_version[0], header.tracker_version[1]);
         printf("INIT BPM=%d, TEMPO=%d\n", header.def_bpm, header.def_tempo);
         printf("ORDER TABLE:\n");
         for (uint16_t i = 0; i < header.song_len; i++) {
