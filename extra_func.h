@@ -55,18 +55,54 @@ void parse_vol_cmd(uint8_t vol_cmd, char *mnemonic, uint8_t *val) {
     }
 }
 
-void encode_dpcm_8bit(int8_t *pcm_data, int8_t *dpcm_data, size_t num_samples) {
+size_t encode_dpcm_8bit(int8_t *pcm_data, int8_t *dpcm_data, size_t num_samples) {
     dpcm_data[0] = pcm_data[0];
+    int16_t accumulated_error = 0;
+    size_t error_count = 0;
+
     for (size_t i = 1; i < num_samples; ++i) {
-        dpcm_data[i] = pcm_data[i] - pcm_data[i - 1];
+        int16_t diff = pcm_data[i] - pcm_data[i - 1] + accumulated_error;
+
+        if (diff > 127) {
+            accumulated_error = diff - 127;
+            diff = 127;
+            error_count++;
+        } else if (diff < -128) {
+            accumulated_error = diff + 128;
+            diff = -128;
+            error_count++;
+        } else {
+            accumulated_error = 0;
+        }
+
+        dpcm_data[i] = (int8_t)diff;
     }
+    return error_count;
 }
 
-void encode_dpcm_16bit(int16_t *pcm_data, int16_t *dpcm_data, size_t num_samples) {
+size_t encode_dpcm_16bit(int16_t *pcm_data, int16_t *dpcm_data, size_t num_samples) {
     dpcm_data[0] = pcm_data[0];
+    int32_t accumulated_error = 0;
+    size_t error_count = 0;
+
     for (size_t i = 1; i < num_samples; ++i) {
-        dpcm_data[i] = pcm_data[i] - pcm_data[i - 1];
+        int32_t diff = pcm_data[i] - pcm_data[i - 1] + accumulated_error;
+
+        if (diff > 32767) {
+            accumulated_error = diff - 32767;
+            diff = 32767;
+            error_count++;
+        } else if (diff < -32768) {
+            accumulated_error = diff + 32768;
+            diff = -32768;
+            error_count++;
+        } else {
+            accumulated_error = 0;
+        }
+
+        dpcm_data[i] = (int16_t)diff;
     }
+    return error_count;
 }
 
 void decode_dpcm_8bit(int8_t *dpcm_data, int8_t *pcm_data, size_t num_samples) {
@@ -83,16 +119,14 @@ void decode_dpcm_16bit(int16_t *dpcm_data, int16_t *pcm_data, size_t num_samples
     }
 }
 
-const float A4_FREQ = 8363.0f;
+const float C4_FREQ = 8363.0f;
 const float SEMITONE_RATIO = powf(2.0f, 1.0f / 12.0f);
 
-float calc_sample_rate(int8_t rela_tone, int8_t fine_tune) {
+float calc_sample_rate(int8_t rel_tone, int8_t fine_tune) {
     const float FINETUNE_RATIO = powf(SEMITONE_RATIO, 1.0f / 128.0f);
-
-    float semitone_adj = powf(SEMITONE_RATIO, rela_tone);
+    float semitone_adj = powf(SEMITONE_RATIO, rel_tone);
     float fine_adj = powf(FINETUNE_RATIO, fine_tune);
-
-    return A4_FREQ * semitone_adj * fine_adj;
+    return C4_FREQ * semitone_adj * fine_adj;
 }
 
 const char *note_table[12] = {"C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-"};
@@ -111,6 +145,10 @@ void xm_note_to_str(uint8_t note, char output[4]) {
         output[2] = '.';
         output[3] = '\0';
     }
+}
+
+float noteToFrequency(float bassfreq, int note) {
+    return bassfreq * powf(SEMITONE_RATIO, note - 1);;
 }
 
 #endif

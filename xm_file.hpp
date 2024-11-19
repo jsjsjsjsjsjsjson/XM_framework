@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 
+#include "audio_struct.h"
+
 #include "extra_func.h"
 
 #define SAFE_DELETE(ptr) do { \
@@ -150,8 +152,6 @@ bool unpack_pattern_data(uint8_t *packed_data, uint32_t packed_size,
         return false;
     }
 
-    sizeof(xm_instrument_t);
-
     uint32_t data_index = 0;
     for (uint16_t row = 0; row < num_rows; ++row) {
         for (uint16_t channel = 0; channel < num_channels; ++channel) {
@@ -229,7 +229,104 @@ bool unpack_pattern_data(uint8_t *packed_data, uint32_t packed_size,
     return true;
 }
 
-#include <unistd.h> 
+class XMMixer {
+
+};
+
+class XMController {
+public:
+    size_t tick_size = 512;
+};
+
+class XMChannel {
+public:
+    XMChannel(XMController& controllerRef) : controller(controllerRef) {}
+
+    uint32_t freq = 0;
+    uint8_t note = 0;
+    uint8_t env_vol = 64;
+    uint16_t vol = 256;
+    uint32_t fadeout_vol = 65536;
+    uint32_t sample_tick_pos = 0;
+    float sample_frac_index = 0;
+    uint32_t sample_int_index = 0;
+    float increment = 0;
+
+    xm_instrument_t *cur_inst;
+    xm_sample_t *cur_sample;
+
+    void setFreq(uint32_t freqRef) {
+        freq = freqRef;
+        increment = (float)freq / SMP_RATE;
+        printf("SET FREQ: %f / %d = %f\n", freq, SMP_RATE, increment);
+    }
+
+    uint32_t getFreq() {
+        return freq;
+    }
+
+    void setNote(uint8_t noteRef) {
+        note = noteRef;
+        cur_sample = &cur_inst->sample[cur_inst->keymap[note]];
+        printf("SET NOTE: %d, SAMPLE #%d\n", note, cur_inst->keymap[note]);
+        setFreq(noteToFrequency(cur_sample->smp_rate, note));
+    }
+
+    uint8_t getNote() {
+        return note;
+    }
+
+    void setInst(xm_instrument_t *inst) {
+        cur_inst = inst;
+    }
+
+    xm_instrument_t *getInst() {
+        return cur_inst;
+    }
+
+    audio16_t processSample() {
+        audio16_t result;
+        if (cur_sample->type.sample_bit == SAMPLE_16BIT) {
+            result.l = ((int16_t*)cur_sample->data)[sample_int_index];
+            result.r = ((int16_t*)cur_sample->data)[sample_int_index];
+        } else {
+            result.l = ((int8_t*)cur_sample->data)[sample_int_index] << 8;
+            result.r = ((int8_t*)cur_sample->data)[sample_int_index] << 8;
+        }
+        uint32_t final_vol = (fadeout_vol * env_vol * vol) >> 14;
+        result.l = (result.l * final_vol) >> 14;
+        result.r = (result.r * final_vol) >> 14;
+        sample_frac_index += increment;
+        if (sample_frac_index >= 1.0f) {
+            sample_int_index += (int)sample_frac_index;
+            sample_frac_index -= (int)sample_frac_index;
+        }
+        sample_tick_pos++;
+        return result;
+    }
+
+    void processEnv() {
+        
+    }
+
+private:
+    XMController& controller;
+};
+
+class XMTrack {
+public:
+    XMTrack(XMController& controllerRef, XMChannel& channelRef) : controller(controllerRef), channel(channelRef) {}
+
+    void processRows(pattern_cell_t *cell) {
+        if (HAS_NOTE(cell->mask)) {
+
+        }
+    }
+
+private:
+    XMController& controller;
+    XMChannel& channel;
+};
 
 class XMFile {
 public:
