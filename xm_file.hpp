@@ -439,7 +439,7 @@ public:
         printf("XM FILE INFO (HEADER=%.17s ID=0x%02X)\n", header.ID_text, header.ID1A);
         printf("FILENAME: %s, SONGNAME: %.20s\n", current_file_name, header.name);
         printf("CHANNELS: %d, PATTERNS: %d, INSTRUMENT: %d, SONGLEN: %d, RESTART IN %d\n", header.num_channel, header.num_pattern, header.num_instrument, header.song_len, header.restart_pos);
-        printf("CREATED IN %.20s, VERSION %d.%d\n", header.tracker_name, header.tracker_version[0], header.tracker_version[1]);
+        printf("CREATED IN %.20s, VERSION %d.%d\n", header.tracker_name, header.tracker_version[1], header.tracker_version[0]);
         printf("INIT BPM=%d, TEMPO=%d\n", header.def_bpm, header.def_tempo);
         printf("ORDER TABLE:\n");
         for (uint16_t i = 0; i < header.song_len; i++) {
