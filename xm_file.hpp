@@ -284,6 +284,10 @@ public:
         return cur_inst;
     }
 
+    xm_sample_t *getCurrentSample() {
+        return cur_sample;
+    }
+
     audio16_t processSample() {
         audio16_t result;
         if (cur_sample->type.sample_bit == SAMPLE_16BIT) {
@@ -306,7 +310,7 @@ public:
     }
 
     void processEnv() {
-        
+
     }
 
 private:
