@@ -54,6 +54,34 @@ void parse_vol_cmd(uint8_t vol_cmd, char *mnemonic, uint8_t *val) {
     }
 }
 
+void encode_dpcm_8bit(int8_t *pcm_data, int8_t *dpcm_data, size_t num_samples) {
+    dpcm_data[0] = pcm_data[0];
+    for (size_t i = 1; i < num_samples; ++i) {
+        dpcm_data[i] = pcm_data[i] - pcm_data[i - 1];
+    }
+}
+
+void encode_dpcm_16bit(int16_t *pcm_data, int16_t *dpcm_data, size_t num_samples) {
+    dpcm_data[0] = pcm_data[0];
+    for (size_t i = 1; i < num_samples; ++i) {
+        dpcm_data[i] = pcm_data[i] - pcm_data[i - 1];
+    }
+}
+
+void decode_dpcm_8bit(int8_t *dpcm_data, int8_t *pcm_data, size_t num_samples) {
+    pcm_data[0] = dpcm_data[0];
+    for (size_t i = 1; i < num_samples; ++i) {
+        pcm_data[i] = pcm_data[i - 1] + dpcm_data[i];
+    }
+}
+
+void decode_dpcm_16bit(int16_t *dpcm_data, int16_t *pcm_data, size_t num_samples) {
+    pcm_data[0] = dpcm_data[0];
+    for (size_t i = 1; i < num_samples; ++i) {
+        pcm_data[i] = pcm_data[i - 1] + dpcm_data[i];
+    }
+}
+
 const char *note_table[12] = {"C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-"};
 
 void xm_note_to_str(uint8_t note, char output[4]) {

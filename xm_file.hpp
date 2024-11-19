@@ -293,6 +293,13 @@ public:
             inst->sample[s].data = new int8_t[inst->sample[s].length];
             printf("READING->%p...", inst->sample[s].data);
             fread(inst->sample[s].data, 1, inst->sample[s].length, xm_file);
+            printf("READY.\n");
+            printf("DECODE DPCM...");
+            if (inst->sample[s].type.sample_bit == SAMPLE_8BIT) {
+                decode_dpcm_8bit((int8_t*)inst->sample[s].data, (int8_t*)inst->sample[s].data, inst->sample[s].length);
+            } else {
+                decode_dpcm_16bit((int16_t*)inst->sample[s].data, (int16_t*)inst->sample[s].data, inst->sample[s].length / 2);
+            }
             printf("SUCCESS\n\n");
         }
     }

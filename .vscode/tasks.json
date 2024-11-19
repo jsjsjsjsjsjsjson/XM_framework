@@ -8,8 +8,10 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
+                "audio_alsa.cpp",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/${fileBasenameNoExtension}",
+                "-lasound"
             ],
             "options": {
                 "cwd": "${fileDirname}"
