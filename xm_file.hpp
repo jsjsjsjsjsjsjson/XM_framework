@@ -92,10 +92,11 @@ typedef struct __attribute__((packed)) {
     int8_t finetune = 0;
     sample_type_t type;
     uint8_t pan = 124;
-    int8_t rela_note_num = 0x1D;
+    int8_t rela_note_num = 0;
     uint8_t mode = 0;
     char name[22] = "SAMPLE";
     void *data = NULL;
+    uint32_t smp_rate;
 } xm_sample_t;
 
 typedef struct __attribute__((packed)) {
@@ -285,8 +286,10 @@ public:
             xm_sample_t smp_tmp;
             printf("READ SAMPLE #%d METADATA IN %p\n", inst->sample.size(), ftell(xm_file));
             fread(&smp_tmp, 1, 40, xm_file);
+            smp_tmp.smp_rate = roundf(calc_sample_rate(smp_tmp.rela_note_num, smp_tmp.finetune));
             inst->sample.push_back(smp_tmp);
-            printf("SAMPLE %s\n%s, SIZE: %d bytes\n\n", smp_tmp.name, smp_tmp.type.sample_bit == SAMPLE_8BIT ? "8BIT" : "16BIT", smp_tmp.length);
+            printf("SAMPLE %s\n%s, SIZE: %d bytes, FINETUNE: %d, RELATIVE NOTE: %d (SAMPLE_RATE: %ldHz)\n\n", smp_tmp.name, smp_tmp.type.sample_bit == SAMPLE_8BIT ? "8BIT" : "16BIT", smp_tmp.length,
+                                                                                                                smp_tmp.finetune, smp_tmp.rela_note_num, smp_tmp.smp_rate);
         }
         for (uint16_t s = 0; s < inst->num_sample; s++) {
             printf("READ SAMPLE #%d IN %p\nALLOC %d bytes MEMORY...\n", s, ftell(xm_file), inst->sample[s].length);

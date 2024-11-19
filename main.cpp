@@ -41,7 +41,7 @@ int main() {
     for (uint16_t i = 0; i < xm_file.header.num_instrument; i++) {
         printf("INSTRUMENT #%d\n", i);
         for (uint16_t s = 0; s < xm_file.instrument[i].num_sample; s++) {
-            printf("PLAY SAMPLE #%d (%d bytes)...\n", s, xm_file.instrument[i].sample[s].length);
+            printf("PLAY SAMPLE #%d (%ldHz %d bytes)...\n", s, xm_file.instrument[i].sample[s].smp_rate, xm_file.instrument[i].sample[s].length);
             int16_t *tmp = new int16_t[xm_file.instrument[i].sample[s].length];
             if (xm_file.instrument[i].sample[s].type.sample_bit == SAMPLE_8BIT) {
                 for (uint32_t k = 0; k < xm_file.instrument[i].sample[s].length; k++) {
@@ -50,6 +50,8 @@ int main() {
             } else {
                 memcpy(tmp, xm_file.instrument[i].sample[s].data, xm_file.instrument[i].sample[s].length);
             }
+            params.sample_rate = xm_file.instrument[i].sample[s].smp_rate;
+            audio_set_params(handle, &params);
             audio_write(handle, tmp, xm_file.instrument[i].sample[s].length);
             delete[] tmp;
             getchar();

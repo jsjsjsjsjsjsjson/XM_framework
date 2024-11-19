@@ -2,6 +2,7 @@
 #define EXTRA_FUNC_H
 
 #include <stdint.h>
+#include <math.h>
 
 #define HAS_NOTE(mask)           (IS_ORIGINAL_MODE(mask) || (((mask) & 0x80) && ((mask) & 0x01)))
 #define HAS_INSTRUMENT(mask)     (IS_ORIGINAL_MODE(mask) || (((mask) & 0x80) && ((mask) & 0x02)))
@@ -80,6 +81,18 @@ void decode_dpcm_16bit(int16_t *dpcm_data, int16_t *pcm_data, size_t num_samples
     for (size_t i = 1; i < num_samples; ++i) {
         pcm_data[i] = pcm_data[i - 1] + dpcm_data[i];
     }
+}
+
+const float A4_FREQ = 8363.0f;
+const float SEMITONE_RATIO = powf(2.0f, 1.0f / 12.0f);
+
+float calc_sample_rate(int8_t rela_tone, int8_t fine_tune) {
+    const float FINETUNE_RATIO = powf(SEMITONE_RATIO, 1.0f / 128.0f);
+
+    float semitone_adj = powf(SEMITONE_RATIO, rela_tone);
+    float fine_adj = powf(FINETUNE_RATIO, fine_tune);
+
+    return A4_FREQ * semitone_adj * fine_adj;
 }
 
 const char *note_table[12] = {"C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-"};

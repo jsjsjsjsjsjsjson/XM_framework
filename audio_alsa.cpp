@@ -29,7 +29,7 @@ audio_status_t audio_initialize(audio_handle_t **handle, const audio_init_params
     snd_pcm_hw_params_alloca(&hw_params);
     snd_pcm_hw_params_any(pcm, hw_params);
     snd_pcm_hw_params_set_access(pcm, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
-    
+
     snd_pcm_format_t alsa_format;
     switch (params->format) {
         case AUDIO_FORMAT_U8:
@@ -81,8 +81,40 @@ audio_status_t audio_write(audio_handle_t *handle, const void *data, size_t data
 audio_status_t audio_set_params(audio_handle_t *handle, const audio_init_params_t *params) {
     if (!handle || !params) return AUDIO_INVALID_PARAM;
 
-    audio_release(handle);
-    return audio_initialize(&handle, params);
+    // Set new parameters without fully reinitializing
+    handle->params = *params;
+
+    // Change sample rate, channels, and format dynamically if supported
+    snd_pcm_hw_params_t *hw_params;
+    snd_pcm_hw_params_alloca(&hw_params);
+    snd_pcm_hw_params_any(handle->pcm_handle, hw_params);
+    snd_pcm_format_t alsa_format;
+    switch (params->format) {
+        case AUDIO_FORMAT_U8:
+            alsa_format = SND_PCM_FORMAT_U8;
+            break;
+        case AUDIO_FORMAT_S16:
+            alsa_format = SND_PCM_FORMAT_S16_LE;
+            break;
+        case AUDIO_FORMAT_S32:
+            alsa_format = SND_PCM_FORMAT_S32_LE;
+            break;
+        case AUDIO_FORMAT_FLOAT:
+            alsa_format = SND_PCM_FORMAT_FLOAT_LE;
+            break;
+        default:
+            return AUDIO_INVALID_PARAM;
+    }
+
+    snd_pcm_hw_params_set_format(handle->pcm_handle, hw_params, alsa_format);
+    snd_pcm_hw_params_set_channels(handle->pcm_handle, hw_params, params->channels);
+    snd_pcm_hw_params_set_rate(handle->pcm_handle, hw_params, params->sample_rate, 0);
+
+    if (snd_pcm_hw_params(handle->pcm_handle, hw_params) < 0) {
+        return AUDIO_ERROR;
+    }
+
+    return AUDIO_SUCCESS;
 }
 
 audio_status_t audio_release(audio_handle_t *handle) {
