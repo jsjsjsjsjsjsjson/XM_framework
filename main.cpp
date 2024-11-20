@@ -85,7 +85,6 @@ int main() {
         printf("\n");
     }
     */
-    
     cli.begin("XM");
     cli.addCommand("print_pat", print_pattern_cmd);
     cli.addCommand("play_inst", play_inst_cmd);
