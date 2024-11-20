@@ -11,7 +11,8 @@
                 "audio_alsa.cpp",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
-                "-lasound"
+                "-lasound",
+                "-Os"
             ],
             "options": {
                 "cwd": "${fileDirname}"

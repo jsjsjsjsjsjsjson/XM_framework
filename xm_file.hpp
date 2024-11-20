@@ -288,6 +288,14 @@ public:
         return cur_sample;
     }
 
+    void noteAttack() {
+
+    }
+
+    void noteRelease() {
+        
+    }
+
     audio16_t processSample() {
         audio16_t result;
         if (cur_sample->type.sample_bit == SAMPLE_16BIT) {
