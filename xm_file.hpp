@@ -444,27 +444,6 @@ class XMController;
 class XMChannel;
 class XMTrack;
 
-class XMController {
-public:
-    size_t tick_size = 0;
-    XMController(XMFile& xmfileRef) : xmfile(xmfileRef) {
-        printf("BPM: %d\n", xmfile.header.def_bpm);
-        tick_size = bpmToTicksize(xmfile.header.def_bpm, SMP_RATE);
-    }
-    std::vector<XMTrack> xm_track;
-    std::vector<XMChannel> xm_channel;
-
-    uint16_t row_pos = 0;
-    uint16_t order_pos = 0;
-
-    std::vector<audio16_t> abuf;
-
-
-
-private:
-    XMFile& xmfile;
-};
-
 typedef enum {
     SAMPLE_STOP,
     SAMPLE_PLAYING
@@ -472,7 +451,9 @@ typedef enum {
 
 class XMChannel {
 public:
-    XMChannel(XMController& controllerRef) : controller(controllerRef) {}
+    void init(XMController* controllerRef) {
+        controller = controllerRef;
+    }
 
     EnvelopeProcessor vol_envProc;
     EnvelopeProcessor pan_envProc;
@@ -556,6 +537,7 @@ public:
             for (size_t i = 0; i < tick_size; i++) {
                 if (samp_state == SAMPLE_STOP) {
                     result.l = 0, result.r = 0;
+                    buf[i].l = result.l, buf[i].r = result.r;
                     continue;
                 }
                 if (cur_sample->type.sample_bit == SAMPLE_16BIT) {
@@ -565,6 +547,7 @@ public:
                         }
                     } else if (sample_int_index >= cur_sample->length / 2) {
                         samp_state = SAMPLE_STOP;
+                        buf[i].l = result.l, buf[i].r = result.r;
                         continue;
                     }
                     result.l = ((int16_t*)cur_sample->data)[sample_int_index];
@@ -576,6 +559,7 @@ public:
                         }
                     } else if (sample_int_index >= cur_sample->length) {
                         samp_state = SAMPLE_STOP;
+                        buf[i].l = result.l, buf[i].r = result.r;
                         continue;
                     }
                     result.l = ((int8_t*)cur_sample->data)[sample_int_index] << 8;
@@ -603,34 +587,71 @@ public:
     }
 
 private:
-    XMController& controller;
+    XMController* controller;
 };
 
 class XMTrack {
 public:
-    XMTrack(XMFile& xmfileRef, XMController& controllerRef, XMChannel& channelRef) :xmfile(xmfileRef), controller(controllerRef), channel(channelRef) {}
+    void init(XMFile *xmfileRef, XMController *controllerRef, XMChannel *channelRef) {
+        xmfile = xmfileRef;
+        controller = controllerRef;
+        channel = channelRef;
+    }
 
     void processRows(pattern_cell_t *cell) {
         if (HAS_NOTE(cell->mask)) {
-            channel.setNote(cell->note);
+            channel->setNote(cell->note);
             if (cell->note == 97) {
-                channel.noteRelease();
+                channel->noteRelease();
             }
         }
         if (HAS_INSTRUMENT(cell->mask)) {
-            channel.setInst(&xmfile.instrument[cell->instrument - 1]);
-            if (channel.note == 97) {
-                channel.noteRelease();
+            channel->setInst(&xmfile->instrument[cell->instrument - 1]);
+            if (channel->note == 97) {
+                channel->noteRelease();
             } else {
-                channel.noteAttack();
+                channel->noteAttack();
             }
         }
     }
 
 private:
-    XMFile& xmfile;
-    XMController& controller;
-    XMChannel& channel;
+    XMFile *xmfile;
+    XMController *controller;
+    XMChannel *channel;
+};
+
+class XMController {
+public:
+    size_t tick_size = 0;
+
+    std::vector<XMChannel> xm_channel;
+    std::vector<XMTrack> xm_track;
+
+    void init(XMFile *xmfileRef) {
+        xmfile = xmfileRef;
+        printf("BPM: %d\n", xmfile->header.def_bpm);
+        tick_size = bpmToTicksize(xmfile->header.def_bpm, SMP_RATE);
+        xm_channel.resize(1);
+        xm_track.resize(1);
+        xm_channel[0].init(this);
+        xm_track[0].init(xmfile, this, &xm_channel[0]);
+    }
+
+    uint16_t row_pos = 0;
+    uint16_t order_pos = 0;
+
+    uint16_t tick_pos = 0;
+
+    std::vector<audio16_t> abuf;
+
+    size_t processTick(audio16_t *obuf) {
+        xm_track[0].processRows(&xmfile->pattern[xmfile->header.order_table[order_pos]].unpack_data[0][row_pos]);
+        xm_channel[0].processSample(obuf, tick_size);
+    }
+
+private:
+    XMFile *xmfile;
 };
 
 #endif

@@ -5,8 +5,8 @@
 #include "audio_api.h"
 
 XMFile xm_file;
-XMController xm_ctrl(xm_file);
-XMChannel xm_chl(xm_ctrl);
+XMController xm_ctrl;
+XMChannel xm_chl;
 
 CommandLineInterface cli;
 
@@ -34,6 +34,7 @@ void play_inst_cmd(int argc, const char* argv[]) {
     uint16_t note = strtol(argv[2], NULL, 0);
     uint16_t tick = strtol(argv[3], NULL, 0);
     size_t tick_size = strtol(argv[4], NULL, 0);
+    xm_chl.init(&xm_ctrl);
     xm_chl.setNote(note);
     xm_chl.setInst(&xm_file.instrument[strtol(argv[1], NULL, 0)]);
     xm_chl.noteAttack();
