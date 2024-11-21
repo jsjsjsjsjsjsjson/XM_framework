@@ -15,7 +15,7 @@ audio_init_params_t params = {
     .sample_rate = 22050,
     .channels = 1,
     .format = AUDIO_FORMAT_S16,
-    .buffer_size = 8192
+    .buffer_size = 4096
 };
 
 void print_pattern_cmd(int argc, const char* argv[]) {
@@ -55,12 +55,30 @@ void play_inst_cmd(int argc, const char* argv[]) {
     delete[] abuf;
 }
 
-int main() {
-    if (audio_initialize(&handle, &params) != AUDIO_SUCCESS) {
-        fprintf(stderr, "Failed to initialize audio system\n");
-        return 1;
+#include <unistd.h>
+
+void play_pat_cmd(int argc, const char* argv[]) {
+    if (argc < 3) {
+        printf("%s <pat> <chl>\n", argv[0]);
+        return;
     }
-    xm_file.open_xm_file("test.xm");
+    uint16_t pat = strtol(argv[1], NULL, 0);
+    uint16_t chl = strtol(argv[2], NULL, 0);
+    xm_ctrl.init(&xm_file);
+    audio16_t *abuf = new audio16_t[8192];
+    size_t bufsize;
+    while (1) {
+        bufsize = xm_ctrl.processTick(abuf);
+        printf("SIZE: %d Bytes\n", bufsize);
+        audio_write(handle, abuf, bufsize);
+        // usleep(5000);
+        // getchar();
+    }
+}
+
+int main() {
+    // xm_file.open_xm_file("fod_nit.xm");
+    xm_file.open_xm_file("Module1.xm");
     printf("Open: %s\n", xm_file.current_file_name);
     xm_file.load_xm_file();
     xm_file.print_xm_info();
@@ -86,9 +104,15 @@ int main() {
         printf("\n");
     }
     */
+    printf("\ninitialize audio system...\n");
+    if (audio_initialize(&handle, &params) != AUDIO_SUCCESS) {
+        fprintf(stderr, "Failed to initialize audio system\n");
+        return 1;
+    }
     cli.begin("XM");
     cli.addCommand("print_pat", print_pattern_cmd);
     cli.addCommand("play_inst", play_inst_cmd);
+    cli.addCommand("play_pat", play_pat_cmd);
     params.sample_rate = SMP_RATE;
     audio_set_params(handle, &params);
     while (true) {
