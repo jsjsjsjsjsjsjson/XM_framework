@@ -11,15 +11,16 @@
 XMFile xm_file;
 XMController xm_ctrl;
 XMChannel xm_chl;
+XMMixer mixer;
 
 CommandLineInterface cli;
 
 audio_handle_t *handle = NULL;
 audio_init_params_t params = {
-    .sample_rate = 22050,
-    .channels = 1,
+    .sample_rate = SMP_RATE,
+    .channels = 2,
     .format = AUDIO_FORMAT_S16,
-    .buffer_size = 4096
+    .buffer_size = BUFF_SIZE
 };
 
 void print_pattern_cmd(int argc, const char* argv[]) {
@@ -43,7 +44,7 @@ void play_inst_cmd(int argc, const char* argv[]) {
     xm_chl.setInst(&xm_file.instrument[strtol(argv[1], NULL, 0)]);
     xm_chl.noteAttack();
     xm_chl.setVol(64);
-    printf("TICK: %d, TICK_SIZE: %d Bytes, ", tick, tick_size * sizeof(audio16_t));
+    printf("TICK: %d, TICK_SIZE: %ld Bytes, ", tick, tick_size * sizeof(audio16_t));
     audio16_t *abuf = new audio16_t[tick_size];
     printf("BUFFER IN %p\n", abuf);
     for (uint16_t i = 0; i < tick; i++) {
@@ -59,8 +60,6 @@ void play_inst_cmd(int argc, const char* argv[]) {
     delete[] abuf;
 }
 
-#include <unistd.h>
-
 void play_pat_cmd(int argc, const char* argv[]) {
     if (argc < 3) {
         printf("%s <pat> <chl>\n", argv[0]);
@@ -68,19 +67,20 @@ void play_pat_cmd(int argc, const char* argv[]) {
     }
     uint16_t pat = strtol(argv[1], NULL, 0);
     uint16_t chl = strtol(argv[2], NULL, 0);
-    xm_ctrl.init(&xm_file);
+    xm_ctrl.init(&xm_file, &mixer);
     audio16_t *abuf = new audio16_t[8192];
     size_t bufsize;
     while (1) {
-        bufsize = xm_ctrl.processTick(abuf);
-        printf("SIZE: %d Bytes\n", bufsize);
+        xm_ctrl.processTick();
+        mixer.processTick(abuf, &bufsize);
+        // printf("SIZE: %d\n", bufsize);
         audio_write(handle, abuf, bufsize);
     }
 }
 
 int main() {
-    // xm_file.open_xm_file("fod_nit.xm");
     xm_file.open_xm_file("fod_nit.xm");
+    // xm_file.open_xm_file("test.xm");
     printf("Open: %s\n", xm_file.current_file_name);
     xm_file.load_xm_file();
     xm_file.print_xm_info();

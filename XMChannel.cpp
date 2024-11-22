@@ -38,7 +38,7 @@ void XMChannel::setInst(xm_instrument_t *inst) {
     printf("SET INST(ENV): POINT = %d, SUS = %d, LOOP = %d ~ %d, TYPEMASK = 0x%X, FADEOUT = %d\n", cur_inst->num_vol_point, cur_inst->vol_sus_point,
                                                                                                     cur_inst->vol_loop_start_point, cur_inst->vol_loop_end_point,
                                                                                                         cur_inst->vol_env_type, cur_inst->vol_fadeout);
-    cur_sample = &cur_inst->sample[cur_inst->keymap[note]];
+    cur_sample = &cur_inst->sample[cur_inst->keymap[note - 1]];
     printf("SET SAMPLE: %d, SAMPLE #%d, VOLUME = %d\n", note, cur_inst->keymap[note], cur_sample->volume);
     setFreq(noteToFrequency(cur_sample->smp_rate, note));
 }

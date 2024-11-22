@@ -19,7 +19,8 @@
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "-lasound",
-                "-Os"
+                "-Os",
+                "-ffast-math"
             ],
             "options": {
                 "cwd": "${fileDirname}"

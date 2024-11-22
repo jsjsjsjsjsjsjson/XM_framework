@@ -137,9 +137,9 @@ void xm_note_to_str(uint8_t note, char output[4]) {
 }
 
 float noteToFrequency(float bassfreq, int note) {
-    return bassfreq * powf(SEMITONE_RATIO, note - 37);
+    return bassfreq * powf(SEMITONE_RATIO, note - 49);
 }
 
 size_t bpmToTicksize(uint16_t bpm, uint32_t smp_rate) {
-    return roundf((2.5f * smp_rate) / bpm);
+    return roundf((2.5f / bpm) * smp_rate);
 }

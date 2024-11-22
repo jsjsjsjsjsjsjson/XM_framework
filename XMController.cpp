@@ -1,9 +1,9 @@
 #include "XMController.hpp"
 
-void XMController::init(XMFile *xmfileRef) {
+void XMController::init(XMFile *xmfileRef, XMMixer *xm_mixer) {
     xmfile = xmfileRef;
+    mixer = xm_mixer;
     printf("BPM: %d\n", xmfile->header.def_bpm);
-    tick_size = bpmToTicksize(xmfile->header.def_bpm, SMP_RATE);
 
     xm_channel.resize(xmfile->header.num_channel);
     xm_track.resize(xmfile->header.num_channel);
@@ -12,11 +12,14 @@ void XMController::init(XMFile *xmfileRef) {
         xm_track[i].init(xmfile, this, &xm_channel[i]);
     }
 
-    speed = 151;//xmfile->header.def_bpm;
-    tempo = 2;//xmfile->header.def_tempo;
+    mixer->setChannel(&xm_channel);
+    
+    speed = xmfile->header.def_bpm;
+    tempo = xmfile->header.def_tempo;
+    tick_size = bpmToTicksize(speed, SMP_RATE);
     tick_pos = tempo;
-    order_pos = 2;
-    chl = 9;
+    order_pos = xmfile->header.restart_pos;
+    mixer->setTickSize(tick_size);
 }
 
 void XMController::setTempo(uint16_t tempoRef) {
@@ -30,7 +33,9 @@ uint16_t XMController::getTempo() {
 
 void XMController::setSpeed(uint16_t speedRef) {
     speed = speedRef;
-    tick_size = bpmToTicksize(xmfile->header.def_bpm, SMP_RATE);
+    tick_size = bpmToTicksize(speed, SMP_RATE);
+    printf("SET BPM: %d, TICKSIZE: %ld\n", speed, tick_size);
+    mixer->setTickSize(tick_size);
 }
 
 uint16_t XMController::getSpeed() {
@@ -41,11 +46,12 @@ size_t XMController::getTickSize() {
     return tick_size;
 }
 
-size_t XMController::processTick(audio16_t *obuf) {
+void XMController::processTick() {
     if (tick_pos >= tempo) {
-        pattern_cell_t *cell = &xmfile->pattern[xmfile->header.order_table[order_pos]].unpack_data[chl][row_pos];
-        printf("%02d, %02d, %02d: %03d %02d\n", order_pos, chl, row_pos, cell->note, cell->instrument);
-        xm_track[chl].processRows(cell);
+        printf("TICK_POS: %d, TEMPO: %d\n", tick_pos, tempo);
+        for (uint16_t c = 0; c < xmfile->header.num_channel; c++) {
+            xm_track[c].processRows(&xmfile->pattern[xmfile->header.order_table[order_pos]].unpack_data[c][row_pos]);
+        }
         tick_pos = 0;
         row_pos++;
         if (row_pos >= xmfile->pattern[xmfile->header.order_table[order_pos]].num_rows) {
@@ -53,7 +59,5 @@ size_t XMController::processTick(audio16_t *obuf) {
             order_pos++;
         }
     }
-    xm_channel[chl].processTick(obuf, tick_size);
     tick_pos++;
-    return tick_size * 4;
 }
