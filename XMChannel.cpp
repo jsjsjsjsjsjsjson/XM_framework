@@ -57,6 +57,7 @@ void XMChannel::noteAttack() {
     samp_state = SAMPLE_PLAYING;
     vol = cur_sample->volume;
     vol_envProc.start();
+    printf("SAMPLER(SAMPLE %.22s): START %dHz\n", cur_sample->name, freq);
 }
 
 void XMChannel::noteRelease() {

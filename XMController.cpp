@@ -53,7 +53,7 @@ size_t XMController::processTick(audio16_t *obuf) {
             order_pos++;
         }
     }
-    xm_channel[chl].processSample(obuf, tick_size);
+    xm_channel[chl].processTick(obuf, tick_size);
     tick_pos++;
     return tick_size * 4;
 }

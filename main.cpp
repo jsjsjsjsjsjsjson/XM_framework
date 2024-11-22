@@ -75,8 +75,6 @@ void play_pat_cmd(int argc, const char* argv[]) {
         bufsize = xm_ctrl.processTick(abuf);
         printf("SIZE: %d Bytes\n", bufsize);
         audio_write(handle, abuf, bufsize);
-        // usleep(5000);
-        // getchar();
     }
 }
 
