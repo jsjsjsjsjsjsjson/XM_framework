@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "CommandLineInterface.hpp"
-#include "xm_file.hpp"
+#include "XMFile.hpp"
 #include "audio_api.h"
+
+#include "XMChannel.hpp"
+#include "XMController.hpp"
+#include "XMTrack.hpp"
 
 XMFile xm_file;
 XMController xm_ctrl;
@@ -45,7 +49,7 @@ void play_inst_cmd(int argc, const char* argv[]) {
     for (uint16_t i = 0; i < tick; i++) {
         xm_chl.processTick(abuf, tick_size);
         audio_write(handle, abuf, tick_size * sizeof(audio16_t));
-        printf("ENV: %d\r", xm_chl.env_vol);
+        // printf("ENV: %d\r", xm_chl.env_vol);
         if (i == tick / 5) {
             xm_chl.noteRelease();
             printf("RELEASE\n");
@@ -78,7 +82,7 @@ void play_pat_cmd(int argc, const char* argv[]) {
 
 int main() {
     // xm_file.open_xm_file("fod_nit.xm");
-    xm_file.open_xm_file("Module1.xm");
+    xm_file.open_xm_file("fod_nit.xm");
     printf("Open: %s\n", xm_file.current_file_name);
     xm_file.load_xm_file();
     xm_file.print_xm_info();
