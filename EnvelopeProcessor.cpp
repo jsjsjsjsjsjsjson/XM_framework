@@ -46,6 +46,12 @@ bool EnvelopeProcessor::next() {
 
     if (!env_type.on) {
         if (state == ENV_RELEASING) {
+            if (vol_fadeout == 0) {
+                state = ENV_FINISHED;
+                current_y = 0;
+                return false;
+            }
+            
             fadeout_value = (fadeout_value > vol_fadeout) ? (fadeout_value - vol_fadeout) : 0;
             current_y = (64 * fadeout_value) >> 16;
 
@@ -61,6 +67,12 @@ bool EnvelopeProcessor::next() {
     }
 
     if (state == ENV_FADINGOUT) {
+        if (vol_fadeout == 0) {
+            state = ENV_FINISHED;
+            current_y = 0;
+            return false;
+        }
+        
         fadeout_value = (fadeout_value > vol_fadeout) ? (fadeout_value - vol_fadeout) : 0;
         current_y = (current_y * fadeout_value) >> 16;
 
@@ -87,6 +99,12 @@ bool EnvelopeProcessor::next() {
 
         if (current_x >= envelope[num_points - 1].x) {
             state = ENV_FADINGOUT;
+        }
+
+        if (vol_fadeout == 0) {
+            state = ENV_FINISHED;
+            current_y = 0;
+            return false;
         }
 
         fadeout_value = (fadeout_value > vol_fadeout) ? (fadeout_value - vol_fadeout) : 0;
@@ -160,15 +178,4 @@ size_t EnvelopeProcessor::findEnvelopeSegment() {
         }
     }
     return num_points - 1;
-}
-
-const char* getStateName(env_state_t state) {
-    switch (state) {
-        case ENV_PLAYING:    return "Playing";
-        case ENV_SUSTAINING: return "Sustaining";
-        case ENV_RELEASING:  return "Releasing";
-        case ENV_FADINGOUT:  return "FadingOut";
-        case ENV_FINISHED:   return "Finished";
-        default:             return "Unknown";
-    }
 }

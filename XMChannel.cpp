@@ -63,6 +63,7 @@ void XMChannel::noteAttack() {
 }
 
 void XMChannel::noteRelease() {
+    printf("NOTE RELEASE\n");
     vol_envProc.release();
 }
 

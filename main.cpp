@@ -55,6 +55,7 @@ void play_inst_cmd(int argc, const char* argv[]) {
             xm_chl.noteRelease();
             printf("RELEASE\n");
         }
+        getchar();
     }
     printf("\n");
     delete[] abuf;
@@ -80,7 +81,7 @@ void play_pat_cmd(int argc, const char* argv[]) {
 
 int main() {
     xm_file.open_xm_file("fod_nit.xm");
-    // xm_file.open_xm_file("test.xm");
+    // xm_file.open_xm_file("dlz-splt.xm");
     printf("Open: %s\n", xm_file.current_file_name);
     xm_file.load_xm_file();
     xm_file.print_xm_info();

@@ -15,22 +15,39 @@ void XMTrack::processEffect(uint8_t type, uint8_t param) {
             controller->setSpeed(param);
             printf("SET SPEED: %d\n", param);
         }
-    }
-    if (type == 0xA) {
+    } else if (type == 0xA) {
         volSild = true;
         if (param) {
             volSildVal = hexToDecimalTens(param) - hexToDecimalOnes(param);
         }
-    } else {
-        volSild = false;
+    }
+}
+
+void XMTrack::eraseEffectState() {
+    volSild = false;
+}
+
+void XMTrack::processVolCtrl(uint8_t vol_cmd) {
+    char type;
+    uint8_t val;
+    parse_vol_cmd(vol_cmd, &type, &val);
+    if (type == 'v') {
+        channel->setVol(val);
+    } else if (type == 'c') {
+        volSild = true;
+        volSildVal = val;
+    } else if (type == 'd') {
+        volSild = true;
+        volSildVal = -val;
     }
 }
 
 void XMTrack::processRows(pattern_cell_t *cell) {
     if (HAS_NOTE(cell->mask)) {
-        channel->setNote(cell->note);
         if (cell->note == 97) {
             channel->noteRelease();
+        } else {
+            channel->setNote(cell->note);
         }
     }
     if (HAS_INSTRUMENT(cell->mask)) {
@@ -41,13 +58,11 @@ void XMTrack::processRows(pattern_cell_t *cell) {
             channel->noteAttack();
         }
     }
+
+    eraseEffectState();
+
     if (HAS_VOLUME(cell->mask)) {
-        char cmd;
-        uint8_t val;
-        parse_vol_cmd(cell->vol_ctrl_byte, &cmd, &val);
-        if (cmd == 'v') {
-            channel->setVol(val);
-        }
+        processVolCtrl(cell->vol_ctrl_byte);
     }
     if (HAS_EFFECT_TYPE(cell->mask)) {
         processEffect(cell->effect_type, cell->effect_param);

@@ -14,8 +14,10 @@ public:
     bool volSild = false;
     int8_t volSildVal = 0;
 
+    void eraseEffectState();
     void init(XMFile* xmfileRef, XMController* controllerRef, XMChannel* channelRef);
     void processEffect(uint8_t type, uint8_t param);
+    void processVolCtrl(uint8_t val);
     void processRows(pattern_cell_t* cell);
     void processTick();
 
