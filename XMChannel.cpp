@@ -22,7 +22,9 @@ uint8_t XMChannel::getNote() {
     return note;
 }
 
-void XMChannel::setVol(uint16_t volRef) {
+void XMChannel::setVol(int16_t volRef) {
+    if (volRef < 0) volRef = 0;
+    else if (volRef > 64) volRef = 64;
     vol = volRef;
 }
 

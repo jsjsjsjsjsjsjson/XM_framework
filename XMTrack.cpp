@@ -15,18 +15,14 @@ void XMTrack::processEffect(uint8_t type, uint8_t param) {
             controller->setSpeed(param);
             printf("SET SPEED: %d\n", param);
         }
-    } else if (type == 0xA) {
+    }
+    if (type == 0xA) {
         volSild = true;
-        // if (hexToDecimalTens(param)) {
-        //     volSildVal = 
-        // } else if (hexToDecimalOnes(param)) {
-
-        // } else {
-        //     ?
-        // }
         if (param) {
             volSildVal = hexToDecimalTens(param) - hexToDecimalOnes(param);
         }
+    } else {
+        volSild = false;
     }
 }
 
@@ -55,5 +51,11 @@ void XMTrack::processRows(pattern_cell_t *cell) {
     }
     if (HAS_EFFECT_TYPE(cell->mask)) {
         processEffect(cell->effect_type, cell->effect_param);
+    }
+}
+
+void XMTrack::processTick() {
+    if (volSild) {
+        channel->setVol(channel->getVol() + volSildVal);
     }
 }

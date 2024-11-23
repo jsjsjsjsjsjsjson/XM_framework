@@ -19,7 +19,7 @@ public:
     uint32_t getFreq();
     void setNote(uint8_t noteRef);
     uint8_t getNote();
-    void setVol(uint16_t volRef);
+    void setVol(int16_t volRef);
     uint16_t getVol();
     void setInst(xm_instrument_t *inst);
     xm_instrument_t* getInst();
