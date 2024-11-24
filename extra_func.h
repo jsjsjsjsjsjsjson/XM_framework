@@ -23,6 +23,9 @@
 #define PORTDOWN16(f, t) (f - ((f * t) >> 8))
 #define PORTDOWN64(f, t) (f - ((f * t) >> 10))
 
+#define PORTUP(f, t, s) ((f) + (((f) * (t)) / (s)))
+#define PORTDOWN(f, t, s) ((f) - (((f) * (t)) / (s)))
+
 void parse_vol_cmd(uint8_t vol_cmd, char* mnemonic, uint8_t* val);
 size_t encode_dpcm_8bit(int8_t* pcm_data, int8_t* dpcm_data, size_t num_samples);
 size_t encode_dpcm_16bit(int16_t* pcm_data, int16_t* dpcm_data, size_t num_samples);

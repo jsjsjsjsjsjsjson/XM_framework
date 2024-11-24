@@ -40,9 +40,9 @@ void play_inst_cmd(int argc, const char* argv[]) {
     uint16_t tick = strtol(argv[3], NULL, 0);
     size_t tick_size = strtol(argv[4], NULL, 0);
     xm_chl.init(&xm_ctrl);
-    xm_chl.setNote(note);
-    xm_chl.setInst(&xm_file.instrument[strtol(argv[1], NULL, 0)]);
-    xm_chl.noteAttack();
+    xm_chl.setNote(note, true);
+    xm_chl.setInst(&xm_file.instrument[strtol(argv[1], NULL, 0)], false);
+    xm_chl.noteAttack(true);
     xm_chl.setVol(64);
     printf("TICK: %d, TICK_SIZE: %ld Bytes, ", tick, tick_size * sizeof(audio16_t));
     audio16_t *abuf = new audio16_t[tick_size];

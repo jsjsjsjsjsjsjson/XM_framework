@@ -26,8 +26,8 @@ void XMMixer::processTick(audio16_t *abuf, size_t *write_bytes) {
             sum.l += cbuf[c][t].l;
             sum.r += cbuf[c][t].r;
         }
-        abuf[t].l = sum.l / (int32_t)(channel->size());
-        abuf[t].r = sum.r / (int32_t)(channel->size());
+        abuf[t].l = sum.l / (int32_t)(channel->size() / 8);
+        abuf[t].r = sum.r / (int32_t)(channel->size() / 8);
     }
     *write_bytes = tick_size * 4;
 }

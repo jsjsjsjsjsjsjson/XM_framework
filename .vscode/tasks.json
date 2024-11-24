@@ -7,7 +7,7 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "main.cpp",
                 "audio_alsa.cpp",
                 "extra_func.c",
                 "XMFile.cpp",

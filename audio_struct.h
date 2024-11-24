@@ -21,7 +21,7 @@ typedef struct {
 typedef int16_t audio16_mono_t;
 typedef int8_t audio8_mono_t;
 
-#define SMP_RATE 48000
+#define SMP_RATE 96000
 #define BUFF_SIZE 4096
 
 #endif

@@ -4,7 +4,9 @@ void XMChannel::init(XMController* controllerRef) {
     controller = controllerRef;
 }
 
-void XMChannel::setFreq(uint32_t freqRef) {
+void XMChannel::setFreq(int32_t freqRef) {
+    if (freqRef < 0) freqRef = 0;
+    lastFreq = freq;
     freq = freqRef;
     increment = (float)freq / SMP_RATE;
     printf("SET FREQ: %d / %d = %f\n", freq, SMP_RATE, increment);
@@ -14,12 +16,25 @@ uint32_t XMChannel::getFreq() {
     return freq;
 }
 
-void XMChannel::setNote(uint8_t noteRef) {
+uint32_t XMChannel::getLastFreq() {
+    return lastFreq;
+}
+
+void XMChannel::setNote(uint8_t noteRef, bool rst_freq) {
+    lastNote = note;
     note = noteRef;
+    if (cur_sample != NULL)
+        setFreq(noteToFrequency(cur_sample->smp_rate, note));
+    else
+        setFreq(0);
 }
 
 uint8_t XMChannel::getNote() {
     return note;
+}
+
+uint8_t XMChannel::getLastNote() {
+    return lastNote;
 }
 
 void XMChannel::setVol(int16_t volRef) {
@@ -32,7 +47,7 @@ uint16_t XMChannel::getVol() {
     return vol;
 }
 
-void XMChannel::setInst(xm_instrument_t *inst) {
+void XMChannel::setInst(xm_instrument_t *inst, bool rst_freq) {
     cur_inst = inst;
     vol_envProc.setEnvelope(cur_inst->vol_env, cur_inst->num_vol_point, cur_inst->vol_sus_point,
                                 cur_inst->vol_loop_start_point, cur_inst->vol_loop_end_point,
@@ -42,7 +57,8 @@ void XMChannel::setInst(xm_instrument_t *inst) {
                                                                                                         cur_inst->vol_env_type, cur_inst->vol_fadeout);
     cur_sample = &cur_inst->sample[cur_inst->keymap[note - 1]];
     printf("SET SAMPLE: %d, SAMPLE #%d, VOLUME = %d\n", note, cur_inst->keymap[note], cur_sample->volume);
-    setFreq(noteToFrequency(cur_sample->smp_rate, note));
+    if (rst_freq)
+        setFreq(noteToFrequency(cur_sample->smp_rate, note));
 }
 
 xm_instrument_t *XMChannel::getInst() {
@@ -53,9 +69,11 @@ xm_sample_t *XMChannel::getCurrentSample() {
     return cur_sample;
 }
 
-void XMChannel::noteAttack() {
-    sample_int_index = 0;
-    sample_frac_index = 0;
+void XMChannel::noteAttack(bool rst) {
+    if (rst) {
+        sample_int_index = 0;
+        sample_frac_index = 0;
+    }
     samp_state = SAMPLE_PLAYING;
     vol = cur_sample->volume;
     vol_envProc.start();
